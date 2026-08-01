@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+# PyInstaller 版本信息文件（--version-file 使用）。
+# 内容必须是合法的 Python 表达式；纯 ASCII 避免编码坑。
+# 想显示中文可以改 StringStruct 的值，但文件需保存为 UTF-8。
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 0, 0),      # 版本号 1.0.0
+    prodvers=(1, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,                 # VOS_NT_WINDOWS32
+    fileType=0x1,               # VFT_APP（应用程序）
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        u'040904B0',            # 英文（美国），Unicode
+        [StringStruct(u'CompanyName', u'C-Clear'),
+         StringStruct(u'FileDescription', u'C Drive Cleaner'),
+         StringStruct(u'FileVersion', u'1.0.0'),
+         StringStruct(u'InternalName', u'C-Clear'),
+         StringStruct(u'LegalCopyright', u'Copyright (C) 2025'),
+         StringStruct(u'OriginalFilename', u'C-Clear.exe'),
+         StringStruct(u'ProductName', u'C-Clear'),
+         StringStruct(u'ProductVersion', u'1.0.0')])
+    ]),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
