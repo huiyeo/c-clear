@@ -147,6 +147,39 @@ def path_list_thumbcache():
     return sorted(glob.glob(os.path.join(folder, "thumbcache_*.db")))
 
 
+def path_list_icon_cache():
+    """图标缓存：和缩略图缓存同目录的 iconcache_*.db 文件。"""
+    folder = env_sub("LOCALAPPDATA", "Microsoft", "Windows", "Explorer")
+    if not folder:
+        return []
+    return sorted(glob.glob(os.path.join(folder, "iconcache_*.db")))
+
+
+def path_list_delivery_opt():
+    """更新分发缓存：Windows 更新下载的优化分发文件。"""
+    p = env_sub("SystemRoot", "SoftwareDistribution", "DeliveryOptimization")
+    return [p] if p else []
+
+
+def path_list_wer():
+    """Windows 错误报告（WER）：程序崩溃留下的记录。
+    注意有两个位置：系统级（ProgramData）和用户级（LocalAppData）。"""
+    paths = []
+    sys_wer = env_sub("ProgramData", "Microsoft", "Windows", "WER")
+    if sys_wer:
+        paths.append(sys_wer)
+    user_wer = env_sub("LOCALAPPDATA", "Microsoft", "Windows", "WER")
+    if user_wer:
+        paths.append(user_wer)
+    return paths
+
+
+def path_list_dx_shader():
+    """DirectX 着色器缓存：游戏/图形程序编译的着色器缓存。"""
+    p = env_sub("LOCALAPPDATA", "D3DSCache")
+    return [p] if p else []
+
+
 # ---------------------------------------------------------------------------
 # 五、清理项清单（数据驱动：一份清单同时喂给扫描和清理，界面也读它）
 # ---------------------------------------------------------------------------
@@ -175,6 +208,14 @@ CACHE_ITEMS = [
      "kind": "folder", "paths": path_list_update_cache},
     {"id": "thumb", "name": "缩略图缓存", "desc": "图片/视频预览图缓存，删了会重新生成",
      "kind": "files", "paths": path_list_thumbcache},
+    {"id": "icon", "name": "图标缓存", "desc": "文件/程序图标缓存，删了会自动重建",
+     "kind": "files", "paths": path_list_icon_cache},
+    {"id": "delivery", "name": "更新分发缓存", "desc": "Windows 更新下载的优化分发文件",
+     "kind": "folder", "paths": path_list_delivery_opt},
+    {"id": "wer", "name": "错误报告", "desc": "程序崩溃记录（WER），可安全删除",
+     "kind": "folder", "paths": path_list_wer},
+    {"id": "dx", "name": "DirectX 着色器缓存", "desc": "游戏/图形程序的着色器编译缓存",
+     "kind": "folder", "paths": path_list_dx_shader},
 ]
 
 
