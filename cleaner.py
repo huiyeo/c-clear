@@ -180,6 +180,43 @@ def path_list_dx_shader():
     return [p] if p else []
 
 
+def path_list_crash_dumps():
+    """程序崩溃转储：软件崩溃时留下的转储文件（%LOCALAPPDATA%\\CrashDumps）。"""
+    p = env_sub("LOCALAPPDATA", "CrashDumps")
+    return [p] if p else []
+
+
+def path_list_minidump():
+    """系统蓝屏转储：C:\\Windows\\Minidump（需要管理员权限才能删）。"""
+    p = env_sub("SystemRoot", "Minidump")
+    return [p] if p else []
+
+
+def path_list_inet_cache():
+    """旧版 IE/Edge 网页缓存（BleachBit 等主流清理工具也会清理这个位置）。"""
+    p = env_sub("LOCALAPPDATA", "Microsoft", "Windows", "INetCache")
+    return [p] if p else []
+
+
+def path_list_browser_extra_cache():
+    """Chrome/Edge 的 GPU 缓存与代码缓存（在 Cache 目录旁边，同属缓存）。"""
+    paths = []
+    for vendor, browser in (("Google", "Chrome"), ("Microsoft", "Edge")):
+        base = env_sub("LOCALAPPDATA", vendor, browser, "User Data")
+        if not base:
+            continue
+        for sub in ("GPUCache", "Code Cache"):
+            paths.extend(glob.glob(os.path.join(base, "*", sub)))
+    return sorted(paths)
+
+
+def path_list_driver_leftovers():
+    """显卡驱动安装包残留：C:\\NVIDIA、C:\\AMD（驱动装完留下的安装包）。"""
+    drive = os.environ.get("SystemDrive", "C:")
+    return [os.path.join(drive, name) for name in ("NVIDIA", "AMD")
+            if os.path.exists(os.path.join(drive, name))]
+
+
 # ---------------------------------------------------------------------------
 # 五、清理项清单（数据驱动：一份清单同时喂给扫描和清理，界面也读它）
 # ---------------------------------------------------------------------------
@@ -216,6 +253,16 @@ CACHE_ITEMS = [
      "kind": "folder", "paths": path_list_wer},
     {"id": "dx", "name": "DirectX 着色器缓存", "desc": "游戏/图形程序的着色器编译缓存",
      "kind": "folder", "paths": path_list_dx_shader},
+    {"id": "crash", "name": "程序崩溃转储", "desc": "软件崩溃留下的转储文件",
+     "kind": "folder", "paths": path_list_crash_dumps},
+    {"id": "minidump", "name": "系统崩溃转储", "desc": "蓝屏记录（Minidump），需管理员",
+     "kind": "folder", "paths": path_list_minidump},
+    {"id": "inet", "name": "旧版网页缓存", "desc": "IE/旧版 Edge 的网页缓存",
+     "kind": "folder", "paths": path_list_inet_cache},
+    {"id": "brow_extra", "name": "浏览器 GPU/代码缓存", "desc": "Chrome/Edge 的图形与代码缓存",
+     "kind": "folder", "paths": path_list_browser_extra_cache},
+    {"id": "driver", "name": "驱动安装残留", "desc": "NVIDIA/AMD 安装包残留，需管理员",
+     "kind": "folder", "paths": path_list_driver_leftovers},
 ]
 
 
