@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 
+# 虚拟环境
+.venv/
+
 # PyInstaller 打包产物
 build/
 dist/
