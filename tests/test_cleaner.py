@@ -22,7 +22,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cleaner import (CACHE_ITEMS, _delete_force, clean_folder_contents,
-                     clean_item, format_bytes, scan_path)
+                     clean_item, format_bytes, scan_all, scan_path)
 
 
 class TestFormatBytes(unittest.TestCase):
@@ -108,6 +108,34 @@ class TestDelete(unittest.TestCase):
             self.assertEqual(freed, 300)
             self.assertTrue(os.path.isdir(d))
             self.assertEqual(os.listdir(d), [])  # 目录还在，但已清空
+
+
+class TestScanAll(unittest.TestCase):
+    """scan_all 批量扫描的测试（用 mock 隔离真实文件系统）。"""
+
+    def test_returns_every_item_and_total(self):
+        import cleaner
+        # 伪造每个清理项的扫描结果：第 i 项 = 100 + i 字节
+        fake_sizes = {item["id"]: 100 + i
+                      for i, item in enumerate(CACHE_ITEMS)}
+        original = cleaner.scan_item
+        cleaner.scan_item = lambda item: fake_sizes[item["id"]]
+        try:
+            sizes, total = scan_all()
+        finally:
+            cleaner.scan_item = original  # 用完恢复，不影响其他测试
+
+        # 每项都有结果，且 id 集合完整
+        self.assertEqual(set(sizes), {item["id"] for item in CACHE_ITEMS})
+        # 总计 = 各项之和
+        self.assertEqual(total, sum(fake_sizes.values()))
+        self.assertEqual(sizes, fake_sizes)
+
+    def test_empty_total_when_no_targets(self):
+        # 在非 Windows 环境（没有那些缓存目录）时，总计为 0 且不报错
+        sizes, total = scan_all()
+        self.assertEqual(total, sum(sizes.values()))
+        self.assertGreaterEqual(total, 0)
 
 
 class TestItems(unittest.TestCase):

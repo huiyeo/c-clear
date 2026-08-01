@@ -256,6 +256,19 @@ def scan_item(item):
     return total
 
 
+def scan_all():
+    """批量扫描所有清理项。
+    返回 (每项大小 dict, 总字节数)——界面用它一次算出"总计可释放"。
+    """
+    sizes = {}
+    total = 0
+    for item in CACHE_ITEMS:
+        size = scan_item(item)
+        sizes[item["id"]] = size
+        total += size
+    return sizes, total
+
+
 # ---------------------------------------------------------------------------
 # 七、删除：尽力删除
 # ---------------------------------------------------------------------------

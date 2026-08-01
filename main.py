@@ -15,7 +15,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from cleaner import CACHE_ITEMS, clean_item, format_bytes, scan_item
+from cleaner import CACHE_ITEMS, clean_item, format_bytes, scan_all
 
 
 class CleanerApp:
@@ -72,11 +72,19 @@ class CleanerApp:
         btn_frame = ttk.Frame(self.root, padding=(12, 6))
         btn_frame.pack(fill="x")
 
+        self.select_all_btn = ttk.Button(btn_frame, text="全选",
+                                         command=self.toggle_select_all)
+        self.select_all_btn.pack(side="left")
+
         self.scan_btn = ttk.Button(btn_frame, text="扫 描", command=self.start_scan)
-        self.scan_btn.pack(side="left")
+        self.scan_btn.pack(side="left", padx=8)
 
         self.clean_btn = ttk.Button(btn_frame, text="一键清理", command=self.start_clean)
-        self.clean_btn.pack(side="left", padx=8)
+        self.clean_btn.pack(side="left")
+
+        self.total_label = tk.Label(btn_frame, text="总计可释放：--",
+                                    fg="#0a7", font=("", 11, "bold"))
+        self.total_label.pack(side="right")
 
         self.status_label = tk.Label(btn_frame, text="就绪", fg="#555")
         self.status_label.pack(side="right")
@@ -111,6 +119,14 @@ class CleanerApp:
 
     # ------------------------- 按钮事件（前台） -------------------------
 
+    def toggle_select_all(self):
+        """全选 / 全不选 切换（看当前是否全部已勾选）。"""
+        all_checked = all(v.get() for v in self.check_vars.values())
+        target = not all_checked
+        for v in self.check_vars.values():
+            v.set(target)
+        self.select_all_btn.config(text="全不选" if target else "全选")
+
     def start_scan(self):
         if self.busy:
             return
@@ -135,18 +151,20 @@ class CleanerApp:
     # ------------------- 后台线程（真正的干活部分） ----------------------
 
     def _scan_worker(self):
-        """扫描线程：算出每一项的大小，通过队列发回界面。"""
+        """扫描线程：批量扫描所有项，把每项大小和总计通过队列发回界面。"""
         try:
+            sizes, total = scan_all()
             for item in CACHE_ITEMS:
-                size = scan_item(item)
-                self.worker_queue.put(("scan_item", item["id"], size))
+                self.worker_queue.put(("scan_item", item["id"], sizes[item["id"]]))
+            self.worker_queue.put(("scan_total", total))
             self.worker_queue.put(("done", "扫描完成"))
         except Exception as e:
             self.worker_queue.put(("done", f"扫描出错：{e}"))
 
     def _clean_worker(self, selected):
-        """清理线程：逐项清理，进度通过队列发回界面。"""
+        """清理线程：逐项清理，汇总释放量，进度通过队列发回界面。"""
         total = len(selected)
+        total_freed, total_failed = 0, 0
         for i, item in enumerate(selected, start=1):
             def progress(done, total_parts, text):
                 self.worker_queue.put(
@@ -155,9 +173,12 @@ class CleanerApp:
                 result = clean_item(item, progress=progress)
                 self.worker_queue.put(("clean_item", result))
             except Exception as e:
-                self.worker_queue.put(
-                    ("clean_item", {"item_id": item["id"], "item": item["name"],
-                                    "freed": 0, "failed": 1, "messages": [str(e)]}))
+                result = {"item_id": item["id"], "item": item["name"],
+                          "freed": 0, "failed": 1, "messages": [str(e)]}
+                self.worker_queue.put(("clean_item", result))
+            total_freed += result["freed"]
+            total_failed += result["failed"]
+        self.worker_queue.put(("clean_summary", total_freed, total_failed))
         self.worker_queue.put(("done", "清理完成"))
 
     # ------------------- 定时轮询：把队列消息刷到界面 -------------------
@@ -179,6 +200,8 @@ class CleanerApp:
         if kind == "scan_item":
             _, item_id, size = msg
             self.size_labels[item_id].config(text=format_bytes(size))
+        elif kind == "scan_total":
+            self.total_label.config(text=f"总计可释放：{format_bytes(msg[1])}")
         elif kind == "progress":
             _, current, total, text = msg
             self.progress.configure(maximum=total, value=current)
@@ -190,6 +213,16 @@ class CleanerApp:
             for m in result["messages"]:
                 self._log("    " + m)
             self.size_labels[result["item_id"]].config(text="")
+        elif kind == "clean_summary":
+            _, freed, failed = msg
+            self.total_label.config(
+                text=f"本次释放：{format_bytes(freed)}（失败 {failed} 项）")
+            if failed:
+                messagebox.showinfo("清理完成",
+                    f"共释放 {format_bytes(freed)}，但有 {failed} 个文件被占用或无权删除。\n"
+                    "建议：右键本程序「以管理员身份运行」能清理得更干净。")
+            else:
+                messagebox.showinfo("清理完成", f"共释放 {format_bytes(freed)}！")
         elif kind == "done":
             _, text = msg
             self.status_label.config(text=text)
