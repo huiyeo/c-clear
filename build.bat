@@ -8,9 +8,9 @@ REM  2. 把 main.py 打包成单个 exe
 REM  产物：dist\C-Clear.exe
 REM ============================================================
 
-echo [1/2] 检查并安装 PyInstaller ...
+echo [1/2] 检查并安装依赖 ...
 python -m pip install --upgrade pip
-python -m pip install pyinstaller
+python -m pip install -r requirements.txt pyinstaller
 
 echo [2/2] 开始打包 ...
 REM --onefile     打成单个 exe，方便拷贝给小白

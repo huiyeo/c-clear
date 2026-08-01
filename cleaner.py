@@ -18,6 +18,13 @@ import stat
 import sys
 from ctypes import wintypes
 
+# 删除文件时优先移到"回收站"（误删还能找回）。
+# send2trash 需要 pip install send2trash；没装的环境（如开发机）回退到直接删除。
+try:
+    import send2trash
+except ImportError:
+    send2trash = None
+
 # ---------------------------------------------------------------------------
 # 一、平台判断
 # ---------------------------------------------------------------------------
@@ -335,8 +342,8 @@ def _rmtree_force(path):
         return False
 
 
-def _delete_force(path):
-    """尽力删除单个文件或目录。返回是否成功。
+def _delete_permanent(path):
+    """直接删除（回收站不可用时的回退方案）。
     - 目录：递归删掉整个目录
     - 文件：去只读后删除
     - 不存在：视为成功（没什么可删的）
@@ -351,6 +358,24 @@ def _delete_force(path):
         except OSError:
             return False
     return True
+
+
+def _delete_force(path):
+    """尽力删除文件或目录，返回是否成功。
+    安全设计：优先把文件移到【回收站】（send2trash），误删还能找回；
+    回收站不可用的环境（如没装 send2trash 的开发机）才回退到直接删除。
+    不存在的路径视为成功（没什么可删的）。
+    """
+    if not os.path.exists(path):
+        return True
+    if send2trash is not None:
+        try:
+            send2trash.send2trash(path)
+            return True
+        except OSError:
+            # 文件被占用等原因导致移不进回收站：返回失败，绝不降级成永久删除
+            return False
+    return _delete_permanent(path)
 
 
 def clean_folder_contents(path, progress=None):

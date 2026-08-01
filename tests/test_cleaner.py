@@ -109,6 +109,34 @@ class TestDelete(unittest.TestCase):
             self.assertTrue(os.path.isdir(d))
             self.assertEqual(os.listdir(d), [])  # 目录还在，但已清空
 
+    def test_delete_uses_recycle_bin_when_available(self):
+        # 装了 send2trash 时：删除应调用 send2trash（移到回收站而非永久删除）
+        from unittest import mock
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(b"data")
+            path = f.name
+        try:
+            with mock.patch("cleaner.send2trash") as st:
+                self.assertTrue(_delete_force(path))
+                st.send2trash.assert_called_once_with(path)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_recycle_bin_failure_does_not_delete_permanently(self):
+        # 回收站失败（如文件被占用）时：返回失败，且不降级成永久删除
+        from unittest import mock
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(b"data")
+            path = f.name
+        try:
+            with mock.patch("cleaner.send2trash") as st:
+                st.send2trash.side_effect = OSError("文件被占用")
+                self.assertFalse(_delete_force(path))
+            self.assertTrue(os.path.exists(path))  # 文件还在，没有被永久删除
+        finally:
+            os.remove(path)
+
 
 class TestScanAll(unittest.TestCase):
     """scan_all 批量扫描的测试（用 mock 隔离真实文件系统）。"""
