@@ -1,0 +1,11 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# PyInstaller 打包产物
+build/
+dist/
+*.spec
+
+# 工具配置（技能等）
+.reasonix/
