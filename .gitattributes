@@ -1,0 +1,7 @@
+# 批处理/PowerShell 脚本强制 CRLF 换行（Windows 命令行必需，LF 会乱码或出错）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Python 源码统一 LF（跨平台标准）
+*.py text eol=lf
